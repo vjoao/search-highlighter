@@ -55,9 +55,26 @@ app.get('/search', async (req, res) => {
   const clothes = await Promise.all(output.clothes)
 
   res.json({
-    brands,
-    clothes
+    brands: brands.map(brand => {
+      return {
+        brand: Object.keys(brand)[0],
+        count: Object.keys(brand).reduce((prev, current) => {
+          return brand[current].length + prev
+        }, 0)
+      }
+    }),
+    clothes: clothes.map(cloth => {
+      return {
+        cloth: Object.keys(cloth)[0],
+        count: Object.keys(cloth).reduce((prev, current) => {
+          return cloth[current].length + prev
+        }, 0)
+      }
+    }),
   })
+
+
+
 })
 
 db.connect((err) => {
