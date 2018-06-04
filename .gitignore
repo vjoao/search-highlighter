@@ -35,6 +35,7 @@ testem.log
 /typings
 
 # server files
+/server/node_modules
 /server/data/sqlite.db
 
 # System Files
