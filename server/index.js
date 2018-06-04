@@ -1,35 +1,22 @@
 const db = require('./db')
-
-const brands = [
-  "Gap",
-  "Banana Republic",
-  "Boss",
-  "Hugo Boss",
-  "Taylor ",
-  "Rebecca Taylor"
-]
-
-const clothes = [
-  "Denim",
-  "Pants",
-  "Sweaters",
-  "Skirts",
-  "Dresses"
-]
+const cors = require('cors')({ origin: true })
 
 var express = require('express')
 const app = express()
 
+app.use(cors)
+
 function search (term, table, field) {
   return new Promise((resolve, reject) => {
     db.get().query(`SELECT * FROM ${table} WHERE ${field} LIKE ?`, `%${term}%`, (err, results) => {
+      // console.log(term, table, field, results)
       if (err) reject(err)
       resolve(results)
     });
   })
 }
 
-app.get('/search', (req, res) => {
+app.get('/search', async (req, res) => {
 
   const { term } = req.query
   const tokens = term.split(' ')
@@ -44,26 +31,32 @@ app.get('/search', (req, res) => {
     brands: [],
     clothes: []
   }
-  const outPromises = []
 
-  tokens.forEach(token => {
-    outPromises.push(search(token, 'brands', 'name'))
-  })
-
-  tokens.forEach(token => {
-    outPromises.push(search(token, 'clothes', 'type'))
-  })
-
-  Promise.all(outPromises).then(([brands, clothes]) => {
-    output.brands = brands
-    output.clothes = clothes
-
-    res.json(output)
-
-  }).catch(error => {
-    res.status(500).json({
-      error
+  try {
+    output.brands = tokens.map(async token => {
+      const brandResults = await search(token, 'brands', 'name')
+      return {
+        [token]: brandResults
+      }
     })
+
+    output.clothes = tokens.map(async token => {
+      const clothResults = await search(token, 'clothes', 'type')
+      return {
+        [token]: clothResults
+      }
+    })
+  } catch (err) {
+    res.status(500).json({ err })
+    return
+  }
+
+  const brands = await Promise.all(output.brands)
+  const clothes = await Promise.all(output.clothes)
+
+  res.json({
+    brands,
+    clothes
   })
 })
 
