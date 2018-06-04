@@ -1,5 +1,4 @@
-var sqlite3 = require('sqlite3')
-var db = new sqlite3.Database('data/sqlite.db')
+const db = require('./db')
 
 const brands = [
   "Gap",
@@ -18,19 +17,63 @@ const clothes = [
   "Dresses"
 ]
 
-db.serialize(function () {
-    db.run("CREATE TABLE IF NOT EXISTS brands (id INTEGER AUTO-INCREMENT, name TEXT)")
-    db.run("CREATE TABLE IF NOT EXISTS clothes (id INTEGER AUTO-INCREMENT, name TEXT)")
-    db.run("INSERT INTO counts (key, value) VALUES (?, ?)", "counter", 0)
-})
-
 var express = require('express')
 const app = express()
 
+function search (term, table, field) {
+  return new Promise((resolve, reject) => {
+    db.get().query(`SELECT * FROM ${table} WHERE ${field} LIKE ?`, `%${term}%`, (err, results) => {
+      if (err) reject(err)
+      resolve(results)
+    });
+  })
+}
+
 app.get('/search', (req, res) => {
-    db.get("SELECT value FROM counts", function(err, row){
-        res.json({ "count" : row.value })
+
+  const { term } = req.query
+  const tokens = term.split(' ')
+
+  const positions = tokens.map(token => ({
+    token,
+    position: term.indexOf(token),
+    size: token.length
+  }))
+
+  const output = {
+    brands: [],
+    clothes: []
+  }
+  const outPromises = []
+
+  tokens.forEach(token => {
+    outPromises.push(search(token, 'brands', 'name'))
+  })
+
+  tokens.forEach(token => {
+    outPromises.push(search(token, 'clothes', 'type'))
+  })
+
+  Promise.all(outPromises).then(([brands, clothes]) => {
+    output.brands = brands
+    output.clothes = clothes
+
+    res.json(output)
+
+  }).catch(error => {
+    res.status(500).json({
+      error
     })
+  })
 })
 
-app.listen(3000)
+db.connect((err) => {
+
+  if (err) {
+    console.log(err.message)
+    return
+  }
+
+  app.listen(3000)
+  console.log('Server listening @ port 3000')
+})
