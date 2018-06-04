@@ -1,6 +1,13 @@
-<p>
-  <form (submit)="performSearch">
-    <input class="form-control" type="text" [(ngModel)]="term">
-  </form>
-  {{term}}
-</p>
+<div class="container mt-3">
+  <div class="jumbotron">
+    <form class="form-group" (ngSubmit)="performSearch(term)">
+      <div class="input-group mb-3">
+        <input placeholder="Search brand or cloth type" class="form-control" type="text" name="term" [(ngModel)]="term">
+        <div class="input-group-append">
+          <button  class="btn btn-primary" type="submit"> Search </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
